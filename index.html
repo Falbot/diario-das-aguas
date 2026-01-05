@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Diário das Águas 💧</title>
+  <style>
+    :root{ --bg:#f5fbff; --card:#fff; --ink:#1e293b; --muted:#64748b; --brand:#2bb7da; --brand-2:#5eead4; --accent:#4ade80; --shadow:0 10px 25px rgba(0,0,0,.08); --radius:18px }
+    [data-contrast="high"]{ --bg:#fff; --card:#fff; --ink:#000; --muted:#111 }
+    *{box-sizing:border-box} html,body{height:100%} body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Noto Sans,sans-serif;color:var(--ink);background:linear-gradient(120deg,var(--bg),#eaf9ff 50%,#f0fffb)}
+    header{position:sticky;top:0;z-index:10;backdrop-filter:saturate(1.2) blur(6px);background:linear-gradient(90deg, rgba(43,183,218,.9), rgba(94,234,212,.9));color:#003041;box-shadow:var(--shadow)}
+    .wrap{max-width:1100px;margin:0 auto;padding:14px 18px}.row{display:flex;align-items:center;gap:14px;flex-wrap:wrap}.title{font-weight:800;display:flex;align-items:center;gap:10px}.logo{width:38px;height:38px;border-radius:12px;background:#fff;display:grid;place-items:center;box-shadow:var(--shadow)}.pill{background:#ffffffaa;padding:6px 10px;border-radius:999px;font-size:13px}.grow{flex:1}
+    main{max-width:1100px;margin:18px auto;padding:0 18px 24px}.card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px}
+    .tabs{display:flex;gap:8px;flex-wrap:wrap}.tab{border:none;background:#fff;color:#0f172a;padding:10px 14px;border-radius:999px;box-shadow:var(--shadow);cursor:pointer;font-weight:600}.tab[aria-selected="true"]{background:linear-gradient(90deg,var(--brand),var(--brand-2));color:#003041}
+    .grid{display:grid;gap:16px}@media(min-width:900px){.grid-2{grid-template-columns:2fr 1fr}.grid-3{grid-template-columns:1.2fr 1fr 1fr}}
+    label{font-size:13px;color:var(--muted);margin-bottom:4px;display:block}input,select,textarea{width:100%;padding:12px;border-radius:14px;border:1px solid #e5e7eb;outline:none}textarea{min-height:96px;resize:vertical}.actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.btn{border:none;padding:12px 14px;border-radius:14px;font-weight:700;cursor:pointer}.btn-primary{background:linear-gradient(90deg,var(--brand),var(--brand-2));color:#003041}.btn-ghost{background:#f1f5f9}.btn-danger{background:#fee2e2;color:#991b1b}.btn-link{background:transparent;color:#0ea5e9;text-decoration:underline}
+    .kpis{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.kpi{background:#fff;border-radius:16px;padding:16px;box-shadow:var(--shadow)}.kpi h3{margin:0;font-size:13px;color:var(--muted)}.kpi p{margin:4px 0 0;font-size:26px;font-weight:800}
+    .progress{height:12px;background:#e2e8f0;border-radius:999px;overflow:hidden}.progress>div{height:100%;background:linear-gradient(90deg,var(--accent),var(--brand));width:0}
+    .list{display:grid;gap:12px;margin-top:12px}.item{display:grid;grid-template-columns:48px 1fr auto;gap:12px;align-items:center;padding:12px;border:1px solid #e5e7eb;border-radius:16px;background:#fff}.ico{width:48px;height:48px;border-radius:14px;display:grid;place-items:center;font-size:22px;background:#f0f9ff}.chip{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:6px 10px;font-size:12px;font-weight:700}.chip.done{background:#ecfdf5;color:#166534}.chip.todo{background:#fff7ed;color:#92400e}.chip.where{background:#eff6ff;color:#1d4ed8}.meta{font-size:12px;color:var(--muted)}.item .ops{display:flex;gap:6px}
+    .filters{display:flex;gap:10px;flex-wrap:wrap}.badges{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}.badge{background:#fff;border:1px dashed #bae6fd;padding:10px 12px;border-radius:12px;box-shadow:var(--shadow);font-size:13px}.hint{font-size:13px;color:var(--muted)}
+    .login{position:fixed;inset:0;display:none;place-items:center;background:linear-gradient(120deg, rgba(43,183,218,.12), rgba(94,234,212,.12))}.login .panel{width:min(520px,92vw)}.hidden{display:none!important}
+    @media print{header,.tabs,.actions,.filters,.controls{display:none!important} body{background:#fff} .item{border:1px solid #000} .chip{border:1px solid #000}}
+  </style>
+  <!-- Firebase SDK (compat) - scripts loaded early but initialization happens inside DOMContentLoaded -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+</head>
+<body>
+  <header role="banner">
+    <div class="wrap row">
+      <div class="title" aria-label="Diário das Águas">
+        <div class="logo" aria-hidden="true"><span>💧</span></div>
+        <div>
+          <div style="font-size:20px;font-weight:800;line-height:1">Diário das Águas</div>
+          <div style="font-size:12px">Para escolas, famílias e comunidade</div>
+        </div>
+      </div>
+      <div class="grow"></div>
+      <span class="pill" id="hello">Olá!</span>
+      <button class="tab" id="toggleContrast" title="Alto contraste" aria-pressed="false">Alto Contraste</button>
+      <button class="tab" id="switchUser" title="Trocar aluno">Trocar Aluno</button>
+    </div>
+  </header>
+
+  <main>
+    <div class="card" style="margin-bottom:12px">
+      <div class="tabs" role="tablist" aria-label="Navegação principal">
+        <button class="tab" role="tab" aria-selected="true" data-view="registro">✍️ Registro</button>
+        <button class="tab" role="tab" aria-selected="false" data-view="diario">📒 Meu Diário</button>
+        <button class="tab" role="tab" aria-selected="false" data-view="metas">🎯 Metas Rápidas</button>
+        <button class="tab" role="tab" aria-selected="false" data-view="dicas">💡 Dicas</button>
+        <button class="tab" role="tab" aria-selected="false" data-view="plataforma">🧩 Plataforma</button>
+        <button class="tab" role="tab" aria-selected="false" data-view="professora">📊 Professora</button>
+      </div>
+    </div>
+
+    <!-- Registro / Formulário -->
+    <section id="view-registro" class="grid grid-2">
+      <div class="card">
+        <h2 style="margin:0 0 10px">Adicionar ação</h2>
+        <p class="hint">Conte o que você <b>fez</b> ou o que <b>precisa fazer</b> para cuidar da água.</p>
+        <div class="grid grid-3" style="margin-top:8px">
+          <div>
+            <label for="date">Data</label>
+            <input id="date" type="date" />
+          </div>
+          <div>
+            <label for="where">Lugar</label>
+            <select id="where" aria-label="Lugar"><option>Casa</option><option>Escola</option><option>Comunidade</option></select>
+          </div>
+          <div>
+            <label for="type">Tipo</label>
+            <select id="type" aria-label="Tipo"><option>Feito</option><option>A Fazer</option></select>
+          </div>
+        </div>
+        <div class="grid" style="margin-top:8px">
+          <div>
+            <label for="title">Título (curtinho)</label>
+            <input id="title" placeholder="Ex.: Fechei a torneira enquanto escovava" maxlength="80" />
+          </div>
+          <div>
+            <label for="emoji">Emoji</label>
+            <select id="emoji" aria-label="Emoji para a ação"><option>💧</option><option>🚿</option><option>🪥</option><option>🪣</option><option>🌧️</option><option>🌿</option><option>🧼</option><option>🏫</option><option>🏠</option><option>👨‍👩‍👧‍👦</option></select>
+          </div>
+        </div>
+        <div style="margin-top:8px">
+          <label for="notes">Detalhes (opcional)</label>
+          <textarea id="notes" placeholder="Conte mais…"></textarea>
+        </div>
+        <div class="actions" style="margin-top:12px">
+          <button class="btn btn-primary" id="saveBtn">Salvar ação</button>
+          <button class="btn btn-ghost" id="clearForm">Limpar</button>
+          <span class="hint" id="saveHint" role="status" aria-live="polite"></span>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2 style="margin:0 0 10px">Seu progresso</h2>
+        <div class="kpis" aria-label="Indicadores">
+          <div class="kpi"><h3>Ações feitas</h3><p id="doneCount">0</p></div>
+          <div class="kpi"><h3>A fazer</h3><p id="todoCount">0</p></div>
+        </div>
+        <div style="margin-top:12px">
+          <div class="progress" aria-label="Progresso de ações"><div id="progressBar"></div></div>
+          <div class="hint" id="progressLabel" style="margin-top:6px">0% concluído</div>
+        </div>
+        <div class="badges" id="badges"></div>
+      </div>
+    </section>
+
+    <!-- Diário (lista) -->
+    <section id="view-diario" class="card hidden">
+      <div class="controls" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <div class="filters" role="region" aria-label="Filtros">
+          <input id="q" placeholder="Buscar…" aria-label="Buscar" />
+          <select id="fWhere" aria-label="Filtrar por lugar"><option value="">Todos os lugares</option><option>Casa</option><option>Escola</option><option>Comunidade</option></select>
+          <select id="fType" aria-label="Filtrar por tipo"><option value="">Feito + A Fazer</option><option>Feito</option><option>A Fazer</option></select>
+          <select id="fSort" aria-label="Ordenar"><option value="new">Mais recentes</option><option value="old">Mais antigas</option></select>
+        </div>
+        <div class="grow"></div>
+        <div class="actions">
+          <button class="btn btn-ghost" id="exportCsv">Baixar CSV</button>
+          <button class="btn btn-ghost" onclick="window.print()">Imprimir</button>
+          <button class="btn btn-danger" id="resetDiary">Resetar Diário</button>
+        </div>
+      </div>
+      <div class="list" id="list" aria-live="polite"></div>
+    </section>
+
+    <!-- Metas -->
+    <section id="view-metas" class="card hidden">
+      <h2 style="margin:0 0 10px">Metas rápidas (adicione com 1 clique!)</h2>
+      <div class="list" id="quickGoals"></div>
+    </section>
+
+    <!-- Dicas -->
+    <section id="view-dicas" class="card hidden">
+      <h2 style="margin:0 0 10px">Dicas para economizar água</h2>
+      <ul>
+        <li>Feche a torneira enquanto escova os dentes ou ensaboa a louça.</li>
+        <li>Banhos curtos: tente 5 minutos ⏱️.</li>
+        <li>Reaproveite água da chuva para regar plantas 🌧️🌿.</li>
+        <li>Conserte vazamentos – pingos viram litros em um dia!</li>
+        <li>Na escola, ajude a lembrar colegas e professores sobre o uso consciente.</li>
+        <li>Use balde para lavar o carro, nunca mangueira.</li>
+      </ul>
+      <p class="hint">Dica: transforme as dicas em <b>metas</b> clicando na aba “Metas Rápidas”.</p>
+    </section>
+
+    <!-- Plataforma -->
+    <section id="view-plataforma" class="card hidden">
+      <h2>📘 Atividades e Respostas</h2>
+      <div class="card" style="margin-top:14px">
+        <h3>✍️ Resposta do Aluno</h3>
+        <textarea id="plataformaResposta" placeholder="Digite aqui..." style="min-height:120px"></textarea>
+        <p class="hint">Salvo automaticamente neste dispositivo.</p>
+      </div>
+      <div class="card" style="margin-top:14px">
+        <h3>🖼️ Envio de Imagem</h3>
+        <input type="file" id="plataformaImagemInput" accept="image/*">
+        <img id="plataformaImagemPreview" style="margin-top:12px;max-width:100%;border-radius:12px" />
+      </div>
+      <div class="card" style="margin-top:14px">
+        <h3>📚 Atividades enviadas pela professora</h3>
+        <div id="plataformaAtividades"></div>
+        <h4 style="margin-top:14px">Adicionar nova atividade</h4>
+        <textarea id="plataformaNovaAtividade" placeholder="Digite a atividade..." style="min-height:80px"></textarea>
+        <button class="btn btn-primary" id="plataformaAdicionarAtividade">Adicionar</button>
+      </div>
+    </section>
+
+    <!-- Painel Professora -->
+    <section id="view-professora" class="card hidden">
+      <h2>📊 Painel da Professora</h2>
+      <p class="hint">Veja todas as respostas salvas na nuvem.</p>
+      <button class="btn btn-primary" id="professoraReload">Recarregar</button>
+      <div id="professoraLista" class="list" style="margin-top:16px"></div>
+    </section>
+
+    <!-- Modal Detalhes Aluno -->
+    <dialog id="profDetalhesDialog" style="border:none;border-radius:16px;padding:0;width:min(650px,95vw)">
+      <div class="card" style="margin:0">
+        <h3 id="profDetalhesTitulo" style="margin:0 0 10px">Detalhes do Aluno</h3>
+        <div id="profDetalhesConteudo" style="max-height:60vh;overflow-y:auto"></div>
+        <div class="actions" style="justify-content:flex-end;margin-top:12px">
+          <button class="btn btn-primary" id="profFecharDetalhes">Fechar</button>
+        </div>
+      </div>
+    </dialog>
+
+  </main>
+
+  <div class="login" id="login" role="dialog" aria-modal="true">
+    <div class="panel card">
+      <div class="row" style="justify-content:center;text-align:center">
+        <div class="logo"><span>💧</span></div>
+        <h2 style="margin:0">Bem-vindo(a) ao Diário das Águas</h2>
+        <p class="hint">Digite seu nome para personalizar seu diário. Não precisa de senha.</p>
+        <input id="studentName" placeholder="Seu nome" style="max-width:360px" />
+        <div class="actions" style="justify-content:center">
+          <button class="btn btn-primary" id="enterBtn">Entrar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <dialog id="editDialog" style="border:none;border-radius:16px;padding:0;width:min(560px,92vw)">
+    <form method="dialog" class="card" style="margin:0">
+      <h3 style="margin:0 0 10px">Editar ação</h3>
+      <input type="hidden" id="editId" />
+      <div class="grid grid-3">
+        <div><label for="editDate">Data</label><input id="editDate" type="date" /></div>
+        <div><label for="editWhere">Lugar</label><select id="editWhere"><option>Casa</option><option>Escola</option><option>Comunidade</option></select></div>
+        <div><label for="editType">Tipo</label><select id="editType"><option>Feito</option><option>A Fazer</option></select></div>
+      </div>
+      <div style="margin-top:8px"><label for="editTitle">Título</label><input id="editTitle" /></div>
+      <div class="grid" style="margin-top:8px"><div><label for="editEmoji">Emoji</label><select id="editEmoji"><option>💧</option><option>🚿</option><option>🪥</option><option>🪣</option><option>🌧️</option><option>🌿</option><option>🧼</option><option>🏫</option><option>🏠</option><option>👨‍👩‍👧‍👦</option></select></div></div>
+      <div style="margin-top:8px"><label for="editNotes">Detalhes</label><textarea id="editNotes"></textarea></div>
+      <div class="actions" style="margin-top:12px;justify-content:flex-end"><button class="btn btn-ghost" value="cancel">Cancelar</button><button class="btn btn-primary" id="editSaveBtn" value="default">Salvar</button></div>
+    </form>
+  </dialog>
+
+  <script>
+    // Entrypoint after DOM ready
+    document.addEventListener('DOMContentLoaded', ()=>{
+      // ===== Util =====
+      const $ = sel => document.querySelector(sel);
+      const $$ = sel => Array.from(document.querySelectorAll(sel));
+      const today = () => new Date().toISOString().slice(0,10);
+
+      // ===== Estado =====
+      let currentUser = localStorage.getItem('diarioAguas_user') || '';
+      function keyFor(name){ return 'diarioAguas_entries_' + (name || 'anonimo'); }
+      let storageKey = keyFor(currentUser);
+      let entries = JSON.parse(localStorage.getItem(storageKey) || '[]');
+
+      // ===== Login =====
+      function ensureLogin(){
+        if(!currentUser){
+          $('#login').style.display = 'grid';
+          $('#studentName').focus();
+        } else {
+          $('#hello').textContent = 'Olá, ' + currentUser + '!';
+          $('#login').style.display = 'none';
+        }
+      }
+
+      $('#enterBtn').addEventListener('click', ()=>{
+        const name = $('#studentName').value.trim();
+        if(!name){ alert('Digite seu nome 🙂'); return; }
+        currentUser = name;
+        localStorage.setItem('diarioAguas_user', currentUser);
+        storageKey = keyFor(currentUser);
+        entries = JSON.parse(localStorage.getItem(storageKey) || '[]');
+        $('#hello').textContent = 'Olá, ' + currentUser + '!';
+        $('#login').style.display = 'none';
+        renderAll();
+      });
+
+      $('#switchUser').addEventListener('click', ()=>{
+        $('#studentName').value = '';
+        $('#login').style.display = 'grid';
+        $('#studentName').focus();
+      });
+
+      // ===== Alto contraste =====
+      $('#toggleContrast').addEventListener('click', (e)=>{
+        const isHigh = document.body.getAttribute('data-contrast') === 'high';
+        document.body.setAttribute('data-contrast', isHigh ? 'normal' : 'high');
+        e.currentTarget.setAttribute('aria-pressed', (!isHigh).toString());
+      });
+
+      // ===== Tabs =====
+      $$('.tab[role="tab"]').forEach(btn => btn.addEventListener('click', ()=> switchView(btn.dataset.view)));
+      function switchView(view){
+        $$('.tab[role="tab"]').forEach(t => t.setAttribute('aria-selected', (t.dataset.view===view).toString()));
+        const allViews = ['registro','diario','metas','dicas','plataforma','professora'];
+        allViews.forEach(v => {
+          const el = document.getElementById('view-'+v);
+          if(!el) return;
+          el.classList.toggle('hidden', v!==view);
+        });
+      }
+
+      // ===== Form actions =====
+      $('#date').value = today();
+      $('#clearForm').addEventListener('click', ()=>{
+        $('#date').value = today(); $('#where').value = 'Casa'; $('#type').value = 'Feito'; $('#title').value = ''; $('#emoji').value = '💧'; $('#notes').value = ''; $('#saveHint').textContent = '';
+      });
+
+      $('#saveBtn').addEventListener('click', ()=>{
+        const item = { id: String(Date.now()), date: $('#date').value || today(), where: $('#where').value, type: $('#type').value, title: ($('#title').value||'').trim(), notes: $('#notes').value.trim(), emoji: $('#emoji').value };
+        if(!item.title){ alert('Escreva um título 🙂'); return; }
+        entries.unshift(item); persist(); $('#saveHint').textContent = 'Salvo!'; renderAll(); $('#title').value = ''; $('#notes').value = '';
+      });
+
+      // make persist available in this scope and on window so backup code can hook into it later
+      function persist(){ localStorage.setItem(storageKey, JSON.stringify(entries)); }
+      window.persist = persist;
+
+      // ===== Render list & stats =====
+      function renderList(){
+        const q = $('#q').value.toLowerCase(); const fw = $('#fWhere').value; const ft = $('#fType').value; const sort = $('#fSort').value;
+        let list = entries.filter(e => (!fw || e.where===fw) && (!ft || e.type===ft) && (!q || (e.title+e.notes+e.where+e.type).toLowerCase().includes(q)) );
+        list.sort((a,b)=> sort==='new' ? (b.id.localeCompare(a.id)) : (a.id.localeCompare(b.id)) );
+        const container = $('#list'); container.innerHTML = '';
+        if(list.length===0){ container.innerHTML = '<p class="hint">Sem registros ainda. Adicione na aba <b>Registro</b> 😊</p>'; return; }
+        for(const e of list){
+          const div = document.createElement('div'); div.className = 'item';
+          div.innerHTML = `
+            <div class="ico" aria-hidden="true">${e.emoji||'💧'}</div>
+            <div>
+              <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><strong>${escapeHtml(e.title)}</strong><span class="chip where">📍 ${e.where}</span><span class="chip ${e.type==='Feito'?'done':'todo'}">${e.type==='Feito'?'✔️ Feito':'📝 A Fazer'}</span></div>
+              <div class="meta">${formatDate(e.date)} • ${e.notes ? escapeHtml(e.notes) : '<em>Sem detalhes</em>'}</div>
+            </div>
+            <div class="ops">
+              ${e.type==='A Fazer' ? `<button class="btn btn-primary" title="Marcar como feito" aria-label="Marcar como feito" data-op="done" data-id="${e.id}">Concluir</button>` : ''}
+              <button class="btn btn-ghost" title="Editar" data-op="edit" data-id="${e.id}">Editar</button>
+              <button class="btn btn-danger" title="Excluir" data-op="del" data-id="${e.id}">Excluir</button>
+            </div>`;
+          container.appendChild(div);
+        }
+      }
+
+      function escapeHtml(s){ return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c])); }
+      function formatDate(iso){ if(!iso) return ''; const [y,m,d] = iso.split('-'); return `${d}/${m}/${y}`; }
+
+      $('#list').addEventListener('click', (ev)=>{
+        const btn = ev.target.closest('button'); if(!btn) return; const id = btn.getAttribute('data-id'); const op = btn.getAttribute('data-op'); const idx = entries.findIndex(e=>e.id===id); if(idx<0) return;
+        if(op==='del'){ if(confirm('Excluir esta ação?')){ entries.splice(idx,1); persist(); renderAll(); } }
+        if(op==='done'){ entries[idx].type = 'Feito'; persist(); renderAll(); }
+        if(op==='edit'){ openEdit(entries[idx]); }
+      });
+
+      function openEdit(e){ $('#editId').value = e.id; $('#editDate').value = e.date || today(); $('#editWhere').value = e.where; $('#editType').value = e.type; $('#editTitle').value = e.title; $('#editEmoji').value = e.emoji || '💧'; $('#editNotes').value = e.notes || ''; $('#editDialog').showModal(); }
+
+      $('#editSaveBtn').addEventListener('click', (ev)=>{ ev.preventDefault(); const id = $('#editId').value; const i = entries.findIndex(e=>e.id===id); if(i<0) return; entries[i] = { ...entries[i], date: $('#editDate').value || today(), where: $('#editWhere').value, type: $('#editType').value, title: $('#editTitle').value.trim() || entries[i].title, emoji: $('#editEmoji').value, notes: $('#editNotes').value.trim() }; persist(); $('#editDialog').close(); renderAll(); });
+
+      // ===== Stats / Progress / Badges =====
+      function renderStats(){ const done = entries.filter(e=>e.type==='Feito').length; const todo = entries.filter(e=>e.type==='A Fazer').length; const total = done+todo; $('#doneCount').textContent = done; $('#todoCount').textContent = todo; const pct = total ? Math.round((done/total)*100) : 0; $('#progressBar').style.width = pct + '%'; $('#progressLabel').textContent = pct + '% concluído'; const bag = $('#badges'); bag.innerHTML = ''; const unlocked = []; if(done>=1) unlocked.push('🥇 Primeira Ação!'); if(done>=5) unlocked.push('🌊 Guardião/ã da Água (5)'); if(done>=10) unlocked.push('🏆 Herói/Heroína da Água (10)'); if(entries.some(e=>e.where==='Escola' && e.type==='Feito')) unlocked.push('🏫 Campeão/ã da Escola'); if(entries.some(e=>e.where==='Casa' && e.type==='Feito')) unlocked.push('🏠 Time da Casa'); if(entries.some(e=>e.where==='Comunidade' && e.type==='Feito')) unlocked.push('🤝 Comunidade Unida'); for(const b of unlocked){ const span = document.createElement('span'); span.className = 'badge'; span.textContent = b; bag.appendChild(span); } }
+
+      // ===== Filtros =====
+      ['q','fWhere','fType','fSort'].forEach(id=>{ const el = document.getElementById(id); if(el) el.addEventListener('input', renderList); });
+
+      // ===== Export CSV =====
+      $('#exportCsv').addEventListener('click', ()=>{
+        if(entries.length===0){ alert('Sem registros para exportar.'); return; }
+        const header = ['Aluno','Data','Lugar','Tipo','Título','Detalhes'];
+        const rows = entries.map(e=>[ currentUser, e.date, e.where, e.type, (e.title||'').replaceAll('"','""'), (e.notes||'').replaceAll('"','""') ]);
+        const csv = [header, ...rows].map(r=> r.map(x=>`"${x}"`).join(',')).join('\n');
+        const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'}); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `diario-das-aguas_${currentUser||'aluno'}.csv`; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+      });
+
+      // ===== Reset =====
+      $('#resetDiary').addEventListener('click', ()=>{ if(confirm('Apagar todos os registros deste aluno?')){ entries = []; persist(); renderAll(); } });
+
+      // ===== Metas rápidas =====
+      const quick = [ {emoji:'🪥', title:'Fechar a torneira ao escovar', where:'Casa'}, {emoji:'🚿', title:'Banho de 5 minutos', where:'Casa'}, {emoji:'🪣', title:'Usar balde para lavar o carro', where:'Casa'}, {emoji:'🌧️', title:'Recolher água da chuva', where:'Casa'}, {emoji:'🌿', title:'Regar plantas com água reaproveitada', where:'Casa'}, {emoji:'🏫', title:'Lembrar a turma de fechar torneiras', where:'Escola'}, {emoji:'🧼', title:'Ensaboar toda a louça antes de enxaguar', where:'Casa'}, {emoji:'🤝', title:'Conversar na rua sobre economizar água', where:'Comunidade'}, {emoji:'🔧', title:'Avisar sobre vazamento na escola', where:'Escola'}, {emoji:'🧽', title:'Lavar a calçada com balde, não mangueira', where:'Casa'} ];
+      function renderQuickGoals(){ const box = $('#quickGoals'); box.innerHTML = ''; quick.forEach((q,idx)=>{ const div = document.createElement('div'); div.className = 'item'; div.innerHTML = `<div class="ico">${q.emoji}</div><div><strong>${q.title}</strong><div class="meta">Sugerido • ${q.where}</div></div><div class="ops"><button class="btn btn-ghost" data-add="todo-${idx}">Adicionar como A Fazer</button><button class="btn btn-primary" data-add="done-${idx}">Adicionar como Feito</button></div>`; box.appendChild(div); }); }
+
+      $('#quickGoals').addEventListener('click', (ev)=>{ const btn = ev.target.closest('button[data-add]'); if(!btn) return; const [kind, idxStr] = btn.getAttribute('data-add').split('-'); const q = quick[Number(idxStr)]; const item = { id: String(Date.now()), date: today(), where: q.where, type: (kind==='done'?'Feito':'A Fazer'), title: q.title, notes: '', emoji: q.emoji }; entries.unshift(item); persist(); renderAll(); switchView('diario'); });
+
+      // ===== Plataforma integration =====
+      function plataformaKey(suf){ return 'plataforma_' + (currentUser||'anonimo') + '_' + suf; }
+      const platResp = document.getElementById('plataformaResposta'); const platImgInput = document.getElementById('plataformaImagemInput'); const platImgPrev = document.getElementById('plataformaImagemPreview'); const platAtividadesBox = document.getElementById('plataformaAtividades'); const platNovaAtiv = document.getElementById('plataformaNovaAtividade'); const platAddBtn = document.getElementById('plataformaAdicionarAtividade');
+
+      function loadPlataformaAtividades(){ if(!platAtividadesBox) return; const list = JSON.parse(localStorage.getItem(plataformaKey('atividades')) || '[]'); platAtividadesBox.innerHTML = ''; list.forEach((txt,idx)=>{ const div = document.createElement('div'); div.className = 'card'; div.style.marginTop = '12px'; div.innerHTML = `<p><strong>Atividade ${idx+1}:</strong> ${escapeHtml(txt)}</p><textarea data-resp="${idx}" placeholder="Resposta do aluno..." style="min-height:90px"></textarea>`; platAtividadesBox.appendChild(div); }); list.forEach((_,idx)=>{ const t = platAtividadesBox.querySelector(`textarea[data-resp='${idx}']`); if(t){ t.value = localStorage.getItem(plataformaKey('resp_'+idx)) || ''; t.addEventListener('input', ()=> localStorage.setItem(plataformaKey('resp_'+idx), t.value)); } }); }
+
+      // respostas e imagem
+      if(platResp){ platResp.value = localStorage.getItem(plataformaKey('resposta')) || ''; platResp.addEventListener('input', ()=> localStorage.setItem(plataformaKey('resposta'), platResp.value)); }
+      if(platImgPrev){ const saved = localStorage.getItem(plataformaKey('imagem')); if(saved) platImgPrev.src = saved; }
+      if(platImgInput){ platImgInput.addEventListener('change', ()=>{ const f = platImgInput.files[0]; if(!f) return; const r = new FileReader(); r.onload = e => { platImgPrev.src = e.target.result; localStorage.setItem(plataformaKey('imagem'), e.target.result); }; r.readAsDataURL(f); }); }
+      if(platAddBtn){ platAddBtn.addEventListener('click', ()=>{ const txt = (platNovaAtiv.value||'').trim(); if(!txt) return; const list = JSON.parse(localStorage.getItem(plataformaKey('atividades')) || '[]'); list.push(txt); localStorage.setItem(plataformaKey('atividades'), JSON.stringify(list)); platNovaAtiv.value = ''; loadPlataformaAtividades(); }); }
+
+      // ensure tabs wired (in case new tabs added)
+      $$('.tab[data-view]').forEach(btn=> btn.addEventListener('click', ()=> switchView(btn.dataset.view)));
+
+      // ===== Painel Professora =====
+      async function carregarPainelProfessora(){
+        const box = document.getElementById('professoraLista');
+        box.innerHTML = '<p class="hint">Carregando...</p>';
+        try{
+          const snap = await db.collection('diario').get();
+          box.innerHTML = '';
+          snap.forEach(doc=>{
+            const div=document.createElement('div'); div.className='item';
+            div.innerHTML = `<div class='ico'>👤</div><div><strong>${doc.id.replace(/^user_/,'')}</strong><div class='meta'>Registros: ${(doc.data().entries||[]).length}</div></div><div class='ops'><button class='btn btn-primary' data-ver='${doc.id.replace(/^user_/,'')}'>Ver</button></div>`;
+            box.appendChild(div);
+          });
+        }catch(err){ box.innerHTML = '<p class="hint">Erro ao carregar painel.</p>'; console.error(err); }
+      }
+      document.getElementById('professoraReload')?.addEventListener('click', carregarPainelProfessora);
+
+      // === Ver detalhes (modal) ===
+      document.addEventListener('click', async ev=>{
+        const btn = ev.target.closest('[data-ver]'); if(!btn) return;
+        const id = btn.getAttribute('data-ver');
+        try{
+          const diarioDoc = await db.collection('diario').doc('user_'+id).get();
+          const plataDoc  = await db.collection('diario').doc('plataforma_'+id).get();
+
+          let html = '';
+          html += `<h4>📌 ID Técnico:</h4><p>user_${id}</p>`;
+
+          const d = diarioDoc.exists ? diarioDoc.data() : { entries: [] };
+          html += `<h4 style='margin-top:14px'>📒 Diário</h4>`;
+          if(d.entries && d.entries.length){ html += `<ul>` + d.entries.map(e=>`<li><b>${e.date}</b> — ${e.emoji||''} ${escapeHtml(e.title)} (${e.where})<br><span class='meta'>${escapeHtml(e.notes||'')}</span></li>`).join('') + `</ul>`; }
+          else html += `<p class='hint'>Nenhum registro.</p>`;
+
+          const p = plataDoc.exists ? plataDoc.data() : {};
+          html += `<h4 style='margin-top:14px'>🧩 Plataforma</h4>`;
+          html += `<p><b>Resposta geral:</b> ${escapeHtml(p.resposta||'')}</p>`;
+          if(p.imagem) html += `<p><img src='${p.imagem}' style='max-width:100%;border-radius:12px'></p>`;
+          if(p.atividades && p.atividades.length){ html += `<h4>📘 Atividades</h4><ul>` + p.atividades.map((t,i)=>`<li><b>${i+1}.</b> ${escapeHtml(t)}</li>`).join('') + `</ul>`; }
+
+          document.getElementById('profDetalhesTitulo').textContent = "Aluno: " + (id || '');
+          document.getElementById('profDetalhesConteudo').innerHTML = html;
+
+          // attach export CSV button (create if missing)
+          if(!document.getElementById('profExportCsv')){
+            const exportBtn = document.createElement('button'); exportBtn.className='btn btn-ghost'; exportBtn.id='profExportCsv'; exportBtn.textContent='Exportar CSV';
+            document.querySelector('#profDetalhesDialog .actions').insertBefore(exportBtn, document.querySelector('#profDetalhesDialog .actions').firstChild);
+          }
+
+          document.getElementById('profExportCsv').onclick = function(){
+            const aluno = id;
+            const text = document.getElementById('profDetalhesConteudo').innerText.replace(/\s+/g,' ').trim();
+            const csv = `Aluno, Dados\n"${aluno}","${text.replace(/"/g,'""')}"`;
+            const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+            const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `relatorio_${aluno}.csv`; a.click(); URL.revokeObjectURL(url);
+          };
+
+          document.getElementById('profDetalhesDialog').showModal();
+        }catch(err){ alert('Erro ao carregar detalhes.'); console.error(err); }
+      });
+
+      document.getElementById('profFecharDetalhes').addEventListener('click',()=>{ document.getElementById('profDetalhesDialog').close(); });
+
+      // ===== Inicialização =====
+      function renderAll(){ renderList(); renderStats(); renderQuickGoals(); loadPlataformaAtividades(); }
+      ensureLogin(); if(currentUser) renderAll();
+
+      // ===== Firebase initialization & cloud backup (hook after persist defined) =====
+      try{
+        const firebaseConfig = {
+          apiKey: "AIzaSyBhkC4qwogw43FjC13LaiQ1uoc2pnLQLX8",
+          authDomain: "diario-das-aguas.firebaseapp.com",
+          projectId: "diario-das-aguas",
+          storageBucket: "diario-das-aguas.firebasestorage.app",
+          messagingSenderId: "672580867276",
+          appId: "1:672580867276:web:1bceaf9581aca2edff1e69",
+          measurementId: "G-1W1QC81WPJ"
+        };
+        firebase.initializeApp(firebaseConfig);
+        window.db = firebase.firestore(); // expose db globally for other handlers
+
+        async function cloudSave(path, data) {
+          try { await db.collection('diario').doc(path).set(data, { merge: true }); }
+          catch(err){ console.error('Erro ao salvar na nuvem:', err); }
+        }
+        async function cloudLoad(path) { try{ const snap = await db.collection('diario').doc(path).get(); return snap.exists ? snap.data() : null; }catch(err){ console.error('Erro ao carregar da nuvem:', err); return null; } }
+
+        // override persist to also save to cloud
+        const originalPersist = window.persist;
+        if(typeof originalPersist === 'function'){
+          window.persist = function(){
+            originalPersist();
+            try{
+              const path = currentUser ? ('user_' + currentUser) : 'anonimo';
+              cloudSave(path, { entries });
+            }catch(e){ console.error(e); }
+          };
+        }
+
+        // Plataforma sync helpers
+        async function syncPlataforma(){
+          if(!currentUser) return;
+          const path = 'plataforma_' + currentUser;
+          const data = { resposta: localStorage.getItem(plataformaKey('resposta')) || '', imagem: localStorage.getItem(plataformaKey('imagem')) || '', atividades: JSON.parse(localStorage.getItem(plataformaKey('atividades'))||'[]') };
+          await cloudSave(path, data);
+        }
+
+        // On load, try to restore cloud data for current user
+        (async ()=>{
+          if(!currentUser) return;
+          const path = 'user_' + currentUser;
+          const cloud = await cloudLoad(path);
+          if(cloud && cloud.entries){ entries = cloud.entries; renderAll(); }
+
+          const ppath = 'plataforma_' + currentUser;
+          const cloudP = await cloudLoad(ppath);
+          if(cloudP){ if(cloudP.resposta) localStorage.setItem(plataformaKey('resposta'), cloudP.resposta); if(cloudP.imagem) localStorage.setItem(plataformaKey('imagem'), cloudP.imagem); if(cloudP.atividades) localStorage.setItem(plataformaKey('atividades'), JSON.stringify(cloudP.atividades)); loadPlataformaAtividades(); }
+        })();
+
+        // Hook platform events to sync
+        platResp?.addEventListener('input', ()=>{ localStorage.setItem(plataformaKey('resposta'), platResp.value); syncPlataforma(); });
+        platImgInput?.addEventListener('change', ()=>{ setTimeout(()=>{ const f = platImgInput.files[0]; if(f){ const r = new FileReader(); r.onload = e=>{ localStorage.setItem(plataformaKey('imagem'), e.target.result); platImgPrev.src = e.target.result; syncPlataforma(); }; r.readAsDataURL(f); } }, 300); });
+        platAddBtn?.addEventListener('click', ()=>{ setTimeout(syncPlataforma, 300); });
+
+      }catch(err){ console.warn('Firebase não inicializado:', err); }
+
+    });
+  </script>
+</body>
+</html>
