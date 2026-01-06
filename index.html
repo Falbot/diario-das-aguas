@@ -466,18 +466,22 @@ async function cloudLoad(docId) {
 }
 
 // 1) Hook: sempre que persist() salvar no localStorage, salva também no Firestore
-const originalPersist = window.persist; // existe no seu código :contentReference[oaicite:3]{index=3}
+// OBS: no seu código, vários lugares chamam `persist()` diretamente (não `window.persist()`).
+// Então precisamos embrulhar a função `persist` da mesma scope.
+const originalPersist = persist;
 if (typeof originalPersist === "function") {
-  window.persist = function () {
+  persist = function () {
     originalPersist();
     try {
       const docId = currentUser ? ("user_" + currentUser) : "anonimo";
-      cloudSave(docId, { entries });
+      cloudSave(docId, { entries }); // fire-and-forget
     } catch (e) {
       console.error(e);
     }
   };
+  window.persist = persist;
 }
+
 
 // 2) Plataforma: espelha resposta/imagem/atividades
 async function syncPlataforma() {
