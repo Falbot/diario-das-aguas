@@ -14,18 +14,6 @@ try {
   window.db = firebase.firestore();
 
   console.log("[Firebase] OK - projectId:", firebaseConfig.projectId);
-
-  // Teste rápido: cria um doc de ping (aparece no Firestore -> Data)
-  window.db.collection("diario").doc("_ping").set({
-    ok: true,
-    ts: new Date().toISOString(),
-    ua: navigator.userAgent
-  }).then(() => {
-    console.log("[Firebase] Ping gravado em diario/_ping");
-  }).catch((err) => {
-    console.error("[Firebase] Falhou ao gravar ping:", err);
-  });
-
 } catch (e) {
   console.error("[Firebase] Falha ao inicializar:", e);
 }
