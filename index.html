@@ -256,6 +256,7 @@
         $('#hello').textContent = 'Olá, ' + currentUser + '!';
         $('#login').style.display = 'none';
         renderAll();
+        loadFromCloudForUser();
       });
 
       $('#switchUser').addEventListener('click', ()=>{
@@ -440,6 +441,104 @@
       // ===== Inicialização =====
       function renderAll(){ renderList(); renderStats(); renderQuickGoals(); loadPlataformaAtividades(); }
       ensureLogin(); if(currentUser) renderAll();
+      if (currentUser) loadFromCloudForUser();
+
+
+// ===== Cloud Sync (Firestore) - usa window.db do firebase-config.js =====
+async function cloudSave(docId, data) {
+  try {
+    if (!window.db) throw new Error("window.db não inicializado");
+    await window.db.collection("diario").doc(docId).set(data, { merge: true });
+  } catch (err) {
+    console.error("Erro ao salvar na nuvem:", err);
+  }
+}
+
+async function cloudLoad(docId) {
+  try {
+    if (!window.db) throw new Error("window.db não inicializado");
+    const snap = await window.db.collection("diario").doc(docId).get();
+    return snap.exists ? snap.data() : null;
+  } catch (err) {
+    console.error("Erro ao carregar da nuvem:", err);
+    return null;
+  }
+}
+
+// 1) Hook: sempre que persist() salvar no localStorage, salva também no Firestore
+const originalPersist = window.persist; // existe no seu código :contentReference[oaicite:3]{index=3}
+if (typeof originalPersist === "function") {
+  window.persist = function () {
+    originalPersist();
+    try {
+      const docId = currentUser ? ("user_" + currentUser) : "anonimo";
+      cloudSave(docId, { entries });
+    } catch (e) {
+      console.error(e);
+    }
+  };
+}
+
+// 2) Plataforma: espelha resposta/imagem/atividades
+async function syncPlataforma() {
+  if (!currentUser) return;
+  const docId = "plataforma_" + currentUser;
+
+  const data = {
+    resposta: localStorage.getItem(plataformaKey("resposta")) || "",
+    imagem: localStorage.getItem(plataformaKey("imagem")) || "",
+    atividades: JSON.parse(localStorage.getItem(plataformaKey("atividades")) || "[]"),
+  };
+
+  await cloudSave(docId, data);
+}
+
+// 3) Ao entrar/abrir: tenta restaurar do Firestore para o usuário atual
+async function loadFromCloudForUser() {
+  if (!currentUser) return;
+
+  const docId = "user_" + currentUser;
+  const cloud = await cloudLoad(docId);
+  if (cloud && cloud.entries) {
+    entries = cloud.entries;
+    // mantém consistência com localStorage
+    localStorage.setItem(storageKey, JSON.stringify(entries));
+    renderAll();
+  }
+
+  const pdocId = "plataforma_" + currentUser;
+  const cloudP = await cloudLoad(pdocId);
+  if (cloudP) {
+    if (cloudP.resposta) localStorage.setItem(plataformaKey("resposta"), cloudP.resposta);
+    if (cloudP.imagem) localStorage.setItem(plataformaKey("imagem"), cloudP.imagem);
+    if (cloudP.atividades) localStorage.setItem(plataformaKey("atividades"), JSON.stringify(cloudP.atividades));
+    loadPlataformaAtividades();
+  }
+}
+
+// 4) “Gatilhos” da Plataforma: sempre que mexer, sincroniza
+platResp?.addEventListener("input", () => {
+  localStorage.setItem(plataformaKey("resposta"), platResp.value);
+  syncPlataforma();
+});
+
+platImgInput?.addEventListener("change", () => {
+  setTimeout(() => {
+    const f = platImgInput.files[0];
+    if (!f) return;
+    const r = new FileReader();
+    r.onload = (e) => {
+      localStorage.setItem(plataformaKey("imagem"), e.target.result);
+      platImgPrev.src = e.target.result;
+      syncPlataforma();
+    };
+    r.readAsDataURL(f);
+  }, 300);
+});
+
+platAddBtn?.addEventListener("click", () => setTimeout(syncPlataforma, 300));
+
+      
     });
   </script>
 </body>
