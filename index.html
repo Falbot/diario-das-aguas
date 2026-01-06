@@ -24,6 +24,7 @@
   <!-- Firebase SDK (compat) - scripts loaded early but initialization happens inside DOMContentLoaded -->
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+  <script src="./firebase-config.js"></script>
 </head>
 <body>
   <header role="banner">
@@ -439,65 +440,6 @@
       // ===== Inicialização =====
       function renderAll(){ renderList(); renderStats(); renderQuickGoals(); loadPlataformaAtividades(); }
       ensureLogin(); if(currentUser) renderAll();
-
-      // ===== Firebase initialization & cloud backup (hook after persist defined) =====
-      try{
-          const firebaseConfig = {
-            apiKey: "AIzaSyCX0el34g6t8QgGigp3nGaVnXSAgfoNM7U",
-            authDomain: "diario-das-aguas-unemat.firebaseapp.com",
-            projectId: "diario-das-aguas-unemat",
-            storageBucket: "diario-das-aguas-unemat.firebasestorage.app",
-            messagingSenderId: "260533766070",
-            appId: "1:260533766070:web:4b0603a0d40a5a57ef2317"
-          };
-        firebase.initializeApp(firebaseConfig);
-        window.db = firebase.firestore(); // expose db globally for other handlers
-
-        async function cloudSave(path, data) {
-          try { await db.collection('diario').doc(path).set(data, { merge: true }); }
-          catch(err){ console.error('Erro ao salvar na nuvem:', err); }
-        }
-        async function cloudLoad(path) { try{ const snap = await db.collection('diario').doc(path).get(); return snap.exists ? snap.data() : null; }catch(err){ console.error('Erro ao carregar da nuvem:', err); return null; } }
-
-        // override persist to also save to cloud
-        const originalPersist = window.persist;
-        if(typeof originalPersist === 'function'){
-          window.persist = function(){
-            originalPersist();
-            try{
-              const path = currentUser ? ('user_' + currentUser) : 'anonimo';
-              cloudSave(path, { entries });
-            }catch(e){ console.error(e); }
-          };
-        }
-
-        // Plataforma sync helpers
-        async function syncPlataforma(){
-          if(!currentUser) return;
-          const path = 'plataforma_' + currentUser;
-          const data = { resposta: localStorage.getItem(plataformaKey('resposta')) || '', imagem: localStorage.getItem(plataformaKey('imagem')) || '', atividades: JSON.parse(localStorage.getItem(plataformaKey('atividades'))||'[]') };
-          await cloudSave(path, data);
-        }
-
-        // On load, try to restore cloud data for current user
-        (async ()=>{
-          if(!currentUser) return;
-          const path = 'user_' + currentUser;
-          const cloud = await cloudLoad(path);
-          if(cloud && cloud.entries){ entries = cloud.entries; renderAll(); }
-
-          const ppath = 'plataforma_' + currentUser;
-          const cloudP = await cloudLoad(ppath);
-          if(cloudP){ if(cloudP.resposta) localStorage.setItem(plataformaKey('resposta'), cloudP.resposta); if(cloudP.imagem) localStorage.setItem(plataformaKey('imagem'), cloudP.imagem); if(cloudP.atividades) localStorage.setItem(plataformaKey('atividades'), JSON.stringify(cloudP.atividades)); loadPlataformaAtividades(); }
-        })();
-
-        // Hook platform events to sync
-        platResp?.addEventListener('input', ()=>{ localStorage.setItem(plataformaKey('resposta'), platResp.value); syncPlataforma(); });
-        platImgInput?.addEventListener('change', ()=>{ setTimeout(()=>{ const f = platImgInput.files[0]; if(f){ const r = new FileReader(); r.onload = e=>{ localStorage.setItem(plataformaKey('imagem'), e.target.result); platImgPrev.src = e.target.result; syncPlataforma(); }; r.readAsDataURL(f); } }, 300); });
-        platAddBtn?.addEventListener('click', ()=>{ setTimeout(syncPlataforma, 300); });
-
-      }catch(err){ console.warn('Firebase não inicializado:', err); }
-
     });
   </script>
 </body>
